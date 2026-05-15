@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:13
     env_file:
       - .env
     container_name: teamfinder_db
