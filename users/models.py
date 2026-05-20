@@ -1,10 +1,15 @@
-import uuid
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
+
+from .managers import UserManager
+from .utils import avatar_upload_path
+
+NAME_MAX_LENGTH = 100
+USER_PHONE_MAX_LENGTH = 30
 
 
 class Skill(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=NAME_MAX_LENGTH, unique=True)
 
     class Meta:
         ordering = ["name"]
@@ -13,33 +18,12 @@ class Skill(models.Model):
         return self.name
 
 
-class UserManager(BaseUserManager):
-    def create_user(self, email, name, surname, password=None, **extra):
-        if not email:
-            raise ValueError("Email обязателен")
-        email = self.normalize_email(email)
-        user = self.model(email=email, name=name, surname=surname, **extra)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, name, surname, password=None, **extra):
-        extra.setdefault("is_staff", True)
-        extra.setdefault("is_superuser", True)
-        return self.create_user(email, name, surname, password, **extra)
-
-
-def avatar_upload_path(instance, filename):
-    ext = filename.rsplit(".", 1)[-1]
-    return f"avatars/avatar_{uuid.uuid4()}.{ext}"
-
-
 class User(AbstractBaseUser, PermissionsMixin):
-    name = models.CharField(max_length=100)
-    surname = models.CharField(max_length=100)
+    name = models.CharField(max_length=NAME_MAX_LENGTH)
+    surname = models.CharField(max_length=NAME_MAX_LENGTH)
     email = models.EmailField(unique=True)
     about = models.TextField(blank=True, default="")
-    phone = models.CharField(max_length=30, blank=True, default="")
+    phone = models.CharField(max_length=USER_PHONE_MAX_LENGTH, blank=True, default="")
     github_url = models.URLField(blank=True, default="")
     avatar = models.ImageField(upload_to=avatar_upload_path, blank=True, null=True)
     skills = models.ManyToManyField(Skill, blank=True, related_name="users")

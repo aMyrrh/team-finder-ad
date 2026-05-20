@@ -1,10 +1,12 @@
 import json
+from http import HTTPStatus
 
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+
+from team_finder.utils import paginate_queryset
 
 from .forms import ProjectForm
 from .models import Project
@@ -12,8 +14,7 @@ from .models import Project
 
 def project_list_view(request):
     projects = Project.objects.select_related("owner").all()
-    paginator = Paginator(projects, 12)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    page_obj = paginate_queryset(request, projects)
     return render(request, "projects/project_list.html", {
         "page_obj": page_obj,
         "projects": projects,
@@ -53,7 +54,9 @@ def edit_project_view(request, project_id):
 @login_required
 @require_POST
 def complete_project_view(request, project_id):
-    project = get_object_or_404(Project, pk=project_id, owner=request.user)
+    project = Project.objects.filter(pk=project_id, owner=request.user).first()
+    if project is None:
+        return JsonResponse({"error": "Not found"}, status=HTTPStatus.NOT_FOUND)
     project.status = Project.STATUS_CLOSED
     project.save(update_fields=["status"])
     return JsonResponse({"status": "ok"})
@@ -62,13 +65,15 @@ def complete_project_view(request, project_id):
 @login_required
 @require_POST
 def toggle_participate_view(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
+    project = Project.objects.filter(pk=project_id).first()
+    if project is None:
+        return JsonResponse({"error": "Not found"}, status=HTTPStatus.NOT_FOUND)
     user = request.user
     if user == project.owner:
-        return JsonResponse({"error": "Owner cannot participate"}, status=400)
-    if user in project.participants.all():
+        return JsonResponse({"error": "Owner cannot participate"}, status=HTTPStatus.BAD_REQUEST)
+    is_participant = project.participants.filter(id=user.id).exists()
+    if is_participant:
         project.participants.remove(user)
-        return JsonResponse({"status": "ok", "participant": False})
     else:
         project.participants.add(user)
-        return JsonResponse({"status": "ok", "participant": True})
+    return JsonResponse({"status": "ok", "participant": not is_participant})

@@ -1,5 +1,8 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+PROJECT_NAME_MAX_LENGTH = 200
+PROJECT_STATUS_MAX_LENGTH = 10
 
 
 class Project(models.Model):
@@ -10,10 +13,14 @@ class Project(models.Model):
         (STATUS_CLOSED, "Закрыт"),
     ]
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=PROJECT_NAME_MAX_LENGTH)
     description = models.TextField(blank=True, default="")
     github_url = models.URLField(blank=True, default="")
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    status = models.CharField(
+        max_length=PROJECT_STATUS_MAX_LENGTH,
+        choices=STATUS_CHOICES,
+        default=STATUS_OPEN,
+    )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
